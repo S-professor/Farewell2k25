@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin QR Code Scanner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+    body {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-family: 'Montserrat', sans-serif;
+      color: #fff;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 40px 50px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 24px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+    }
+
+    #scanner {
+      width: 320px;
+      height: 240px;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      border: 3px solid #9f7aea;
+      background: #222;
+    }
+
+    #scanResult {
+      font-weight: 700;
+      text-align: center;
+      font-size: 18px;
+      padding: 10px 0;
+      min-height: 50px;
+    }
+
+    button {
+      background: #9f7aea;
+      border: none;
+      color: white;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 0;
+      border-radius: 8px;
+      width: 100%;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      letter-spacing: 1px;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #7c63b8;
+    }
+  </style>
+</head>
+<body>
+  <main class="container" role="main">
+    <h1>Admin QR Scanner</h1>
+    <div id="scanner"></div>
+    <div id="scanResult" aria-live="polite" aria-atomic="true">Scan a user's QR code</div>
+    <button id="startScanBtn">Start Scanner</button>
+    <button id="stopScanBtn" disabled>Stop Scanner</button>
+  </main>
+
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+  <script>
+    // Simulated DB of allowed users
+    const allowedUsers = ['alice', 'bob', 'charlie', 'dave'];
+
+    const scannerDiv = document.getElementById('scanner');
+    const scanResultDiv = document.getElementById('scanResult');
+    const startScanBtn = document.getElementById('startScanBtn');
+    const stopScanBtn = document.getElementById('stopScanBtn');
+
+    let html5QrCode = null;
+
+    function onScanSuccess(decodedText, decodedResult) {
+      // Stop scanning on first successful read
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          startScanBtn.disabled = false;
+          stopScanBtn.disabled = true;
+        }).catch(err => {
+          console.error('Failed to stop scanner:', err);
+        });
+      }
+
+      try {
+        const dataObj = JSON.parse(decodedText);
+
+        if (dataObj.username && allowedUsers.includes(dataObj.username.toLowerCase())) {
+                    scanResultDiv.textContent = `Welcome, ${dataObj.username}. You can go inside.`;
+          scanResultDiv.style.color = '#6ce56c'; // greenish
+        } else {
+          scanResultDiv.textContent = "Access denied: User not recognized.";
+          scanResultDiv.style.color = '#e56c6c'; // redish
+        }
+      } catch (err) {
+        scanResultDiv.textContent = "Invalid QR code data.";
+        scanResultDiv.style.color = '#e56c6c'; // redish
+      }
+    }
+
+    function onScanFailure(error) {
+      // We can ignore scan failure for better UX
+      // console.warn(QR scan error: ${error});
+    }
+
+    startScanBtn.addEventListener('click', () => {
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("scanner");
+      }
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: 250
+        },
+        onScanSuccess,
+        onScanFailure
+      ).then(() => {
+        scanResultDiv.textContent = 'Scanning...';
+        scanResultDiv.style.color = '#fff';
+        startScanBtn.disabled = true;
+        stopScanBtn.disabled = false;
+      }).catch(err => {
+        alert('Unable to start camera scanning: ' + err);
+      });
+    });
+
+    stopScanBtn.addEventListener('click', () => {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          scanResultDiv.textContent = 'Scanner stopped.';
+          scanResultDiv.style.color = '#fff';
+          startScanBtn.disabled = false;
+          stopScanBtn.disabled = true;
+        }).catch(err => {
+          alert('Failed to stop scanner: ' + err);
+        });
+      }
+    });
+
+  </script>
+</body>
+</html>
